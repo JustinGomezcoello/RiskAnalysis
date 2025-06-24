@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  fastapi:
+    build: .
+    container_name: fastapi-events
+    environment:
+      - NVD_API_KEY=${NVD_API_KEY}
+      - SHODAN_API_KEY=${SHODAN_API_KEY}
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+    ports:
+      - "8000:8000"
+    depends_on:
+      - rabbitmq
+
+  worker:
+    build: .
+    container_name: fastapi-worker
+    command: ["python", "worker.py"]
+    environment:
+      - NVD_API_KEY=${NVD_API_KEY}
+      - SHODAN_API_KEY=${SHODAN_API_KEY}
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      - rabbitmq
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest 
