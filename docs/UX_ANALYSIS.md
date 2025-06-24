@@ -1,4 +1,3 @@
-
 # Análisis UX - Sistema de Gestión de Riesgos Cibernéticos
 
 ## Investigación de Usuarios
