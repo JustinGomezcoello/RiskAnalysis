@@ -164,12 +164,3 @@ To contribute to the project:
 3. Implement changes with tests
 4. Submit a Pull Request
 
-## License
-
-This project is licensed under the MIT License - see [LICENSE](LICENSE) for details.
-
-## Contact
-
-- **Development Team**: dev-team@cybersecurity.empresa.com
-- **Solution Architect**: architect@cybersecurity.empresa.com
-- **Support**: support@cybersecurity.empresa.com
