@@ -1,0 +1,7 @@
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cyber-risk-system
+  labels:
+    name: cyber-risk-system

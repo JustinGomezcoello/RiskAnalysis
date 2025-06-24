@@ -1,0 +1,177 @@
+
+version: '3.8'
+
+services:
+  # API Gateway
+  kong:
+    image: kong:3.4
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /kong/declarative/kong.yml
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+    volumes:
+      - ./kong/kong.yml:/kong/declarative/kong.yml
+    ports:
+      - "8000:8000"   # Proxy
+      - "8001:8001"   # Admin API
+    networks:
+      - cyber-risk-net
+
+  # Sistema 1: Monolito Django
+  django-monolith:
+    build:
+      context: ./backend/django-monolith
+      dockerfile: Dockerfile
+    environment:
+      - DEBUG=1
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/cyber_risk
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "8002:8000"
+    volumes:
+      - ./backend/django-monolith:/app
+    networks:
+      - cyber-risk-net
+
+  # Sistema 2: Event-Driven FastAPI
+  fastapi-events:
+    build:
+      context: ./backend/fastapi-events
+      dockerfile: Dockerfile
+    environment:
+      - REDIS_URL=redis://redis:6379/1
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672//
+      - SHODAN_API_KEY=${SHODAN_API_KEY}
+      - NVD_API_KEY=${NVD_API_KEY}
+    depends_on:
+      - redis
+      - rabbitmq
+    ports:
+      - "8003:8000"
+    volumes:
+      - ./backend/fastapi-events:/app
+    networks:
+      - cyber-risk-net
+
+  # Sistema 3: Space-Based Go
+  go-space:
+    build:
+      context: ./backend/go-space
+      dockerfile: Dockerfile
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/cyber_risk
+      - REDIS_URL=redis://redis:6379/2
+    depends_on:
+      - mongo
+      - redis
+    ports:
+      - "8004:8080"
+    volumes:
+      - ./backend/go-space:/app
+    networks:
+      - cyber-risk-net
+
+  # Frontend React
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    networks:
+      - cyber-risk-net
+
+  # Bases de Datos
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: cyber_risk
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - cyber-risk-net
+
+  mongo:
+    image: mongo:7
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: cyber_risk
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - "27017:27017"
+    networks:
+      - cyber-risk-net
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - cyber-risk-net
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - cyber-risk-net
+
+  # Monitoreo
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - cyber-risk-net
+
+  grafana:
+    image: grafana/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana:/etc/grafana/provisioning
+    networks:
+      - cyber-risk-net
+
+volumes:
+  postgres_data:
+  mongo_data:
+  redis_data:
+  rabbitmq_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  cyber-risk-net:
+    driver: bridge
