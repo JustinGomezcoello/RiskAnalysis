@@ -1,0 +1,20 @@
+_format_version: "3.0"
+services:
+  - name: django-monolith
+    url: http://django-monolith:8000
+    routes:
+      - name: django-monolith-root
+        paths:
+          - /api/monolith
+  - name: fastapi-events
+    url: http://fastapi-events:8000
+    routes:
+      - name: fastapi-events-root
+        paths:
+          - /api/events
+  - name: go-space
+    url: http://go-space:8080
+    routes:
+      - name: go-space-root
+        paths:
+          - /api/space 
